@@ -330,15 +330,32 @@ public class HelloController {
     protected void onAddToBasketClick() {
         MenuItem selected = orderMenuTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
-            boolean found = false;
-            for (BasketItem bi : basket) {
-                if (bi.getItem().getId() == selected.getId()) {
-                    bi.addOne();
-                    found = true;
-                    break;
-                }
+            // Megkeressük, benne van-e már ez az étel a kosárban
+            BasketItem existingItem = basket.stream()
+                    .filter(bi -> bi.getItem().getId() == selected.getId())
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingItem != null) {
+                existingItem.addOne(); // Növeljük a mennyiséget
+            } else {
+                basket.add(new BasketItem(selected, 1)); // Új tételként adjuk hozzá
             }
-            if (!found) basket.add(new BasketItem(selected, 1));
+
+            basketListView.refresh(); // Frissítjük a nézetet, hogy látszódjon az új mennyiség
+            updateOrderTotal();
+        }
+    }
+
+    @FXML
+    protected void onRemoveFromBasketClick() {
+        BasketItem selected = basketListView.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            if (selected.getQuantity() > 1) {
+                selected.setQuantity(selected.getQuantity() - 1); // Csökkentjük a mennyiséget
+            } else {
+                basket.remove(selected); // Ha csak 1 volt, töröljük a listából
+            }
             basketListView.refresh();
             updateOrderTotal();
         }

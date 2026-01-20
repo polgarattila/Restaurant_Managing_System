@@ -17,4 +17,8 @@ public class BasketItem {
     public String toString() {
         return item.getName() + " x" + quantity + " (" + (item.getPrice() * quantity) + " Ft)";
     }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
 }

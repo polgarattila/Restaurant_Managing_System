@@ -222,4 +222,16 @@ public class DatabaseConnection {
         }
         return details;
     }
+
+    // Tétel mennyiségének módosítása
+    public static void updateOrderItemQuantity(int itemId, int newQuantity) {
+        String sql = "UPDATE order_items SET quantity = ? WHERE id = ?";
+        // Itt futtasd le a PreparedStatement-et...
+    }
+
+    // Tétel törlése a rendelésből
+    public static void deleteOrderItem(int itemId) {
+        String sql = "DELETE FROM order_items WHERE id = ?";
+        // Itt futtasd le a PreparedStatement-et...
+    }
 }
