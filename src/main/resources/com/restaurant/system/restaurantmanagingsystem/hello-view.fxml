@@ -8,6 +8,12 @@
         <Tab text="Étlap Kezelése">
             <VBox spacing="10" alignment="CENTER">
                 <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Keresés:" />
+                    <TextField fx:id="searchField" promptText="Írd be az étel nevét..." prefWidth="250.0" />
+                </HBox>
+
                 <TableView fx:id="menuTable" prefHeight="350.0" prefWidth="600.0">
                     <columns>
                         <TableColumn fx:id="nameColumn" text="Étel név" prefWidth="150.0" />
@@ -36,10 +42,8 @@
                 <GridPane vgap="10" hgap="10" alignment="CENTER">
                     <Label text="Név:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                     <TextField fx:id="newNameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
                     <Label text="Ár:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                     <TextField fx:id="newPriceField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
                     <Label text="Kategória:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                     <ComboBox fx:id="newCategoryComboBox" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                 </GridPane>
@@ -47,4 +51,24 @@
             </VBox>
         </Tab>
     </tabs>
+
+    <Tab text="Statisztika">
+        <VBox spacing="20" alignment="CENTER">
+            <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
+            <Label text="Étlap Áttekintés" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+
+            <GridPane vgap="15" hgap="20" alignment="CENTER" style="-fx-background-color: #f4f4f4; -fx-padding: 20; -fx-background-radius: 10;">
+                <Label text="Összes étel száma:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+                <Label fx:id="totalItemsLabel" text="0" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="Átlagos ár:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+                <Label fx:id="avgPriceLabel" text="0 Ft" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                <Label text="Legdrágább étel:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+                <Label fx:id="maxPriceLabel" text="-" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            </GridPane>
+
+            <Button text="Adatok Frissítése" onAction="#refreshStatistics" style="-fx-background-color: #607D8B; -fx-text-fill: white;"/>
+        </VBox>
+    </Tab>
 </TabPane>
