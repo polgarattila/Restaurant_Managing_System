@@ -199,9 +199,9 @@ public class DatabaseConnection {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    public static List<String> getOrderDetails(int orderId) {
-        List<String> details = new ArrayList<>();
-        String sql = "SELECT m.name, oi.quantity, oi.price_at_time " +
+    public static List<ActiveOrderItem> getOrderDetailsForEditing(int orderId) {
+        List<ActiveOrderItem> details = new ArrayList<>();
+        String sql = "SELECT oi.id, m.name, oi.quantity, oi.price_at_time " +
                 "FROM order_items oi " +
                 "JOIN menu_items m ON oi.menu_item_id = m.id " +
                 "WHERE oi.order_id = ?";
@@ -211,27 +211,52 @@ public class DatabaseConnection {
             pstmt.setInt(1, orderId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    String row = rs.getString("name") + " x" +
-                            rs.getInt("quantity") + " (" +
-                            (int)rs.getDouble("price_at_time") + " Ft/db)";
-                    details.add(row);
+                    details.add(new ActiveOrderItem(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            rs.getInt("quantity"),
+                            rs.getDouble("price_at_time")
+                    ));
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        } catch (SQLException e) { e.printStackTrace(); }
         return details;
     }
 
     // Tétel mennyiségének módosítása
     public static void updateOrderItemQuantity(int itemId, int newQuantity) {
         String sql = "UPDATE order_items SET quantity = ? WHERE id = ?";
-        // Itt futtasd le a PreparedStatement-et...
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, newQuantity);
+            pstmt.setInt(2, itemId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     // Tétel törlése a rendelésből
     public static void deleteOrderItem(int itemId) {
         String sql = "DELETE FROM order_items WHERE id = ?";
-        // Itt futtasd le a PreparedStatement-et...
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, itemId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static void recalculateOrderTotal(int orderId) {
+        // SQL lekérdezés, ami kiszámolja az összeget és rögtön frissíti is a rendelést
+        String sql = "UPDATE orders SET total_price = " +
+                "(SELECT SUM(quantity * price_at_time) FROM order_items WHERE order_id = ?) " +
+                "WHERE id = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            pstmt.setInt(2, orderId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

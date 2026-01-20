@@ -7,68 +7,64 @@ import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseButton;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class HelloController {
 
+    // ... (A többi @FXML meződ változatlan marad, kivéve ezt az egyet lent)
     @FXML private TableView<MenuItem> menuTable;
     @FXML private TableColumn<MenuItem, String> nameColumn;
     @FXML private TableColumn<MenuItem, Double> priceColumn;
     @FXML private TableColumn<MenuItem, String> categoryColumn;
-
     @FXML private TextField searchField;
-
     @FXML private TextField newNameField;
     @FXML private TextField newPriceField;
     @FXML private ComboBox<Category> newCategoryComboBox;
-
     @FXML private TextField editNameField;
     @FXML private TextField editPriceField;
     @FXML private ComboBox<Category> editCategoryComboBox;
-
     @FXML private Label totalItemsLabel;
     @FXML private Label avgPriceLabel;
     @FXML private Label maxPriceLabel;
-
     @FXML private ListView<Category> categoryListView;
     @FXML private TextField categoryNameField;
     @FXML private ComboBox<Category> parentCategoryComboBox;
-
     @FXML private TableView<MenuItem> orderMenuTable;
     @FXML private TableColumn<MenuItem, String> orderMenuNameColumn;
     @FXML private TableColumn<MenuItem, Double> orderMenuPriceColumn;
     @FXML private ListView<BasketItem> basketListView;
     @FXML private Spinner<Integer> tableNumberSpinner;
     @FXML private Label orderTotalLabel;
-
     @FXML private TableView<Order> activeOrdersTable;
     @FXML private TableColumn<Order, Integer> orderIdColumn;
     @FXML private TableColumn<Order, Integer> orderTableColumn;
     @FXML private TableColumn<Order, String> orderTimeColumn;
     @FXML private TableColumn<Order, Double> orderTotalColumn;
-    @FXML private ListView<String> activeOrderDetailsList;
     @FXML private TextField orderSearchField;
+
+    // FONTOS: Ez a sor változott meg String-ről ActiveOrderItem-re
+    @FXML private ListView<ActiveOrderItem> activeOrderDetailsList;
 
     private ObservableList<BasketItem> basket = FXCollections.observableArrayList();
     private ObservableList<MenuItem> masterData = FXCollections.observableArrayList();
 
     public void initialize() {
-        // --- 1. CELLA GYÁRAK BEÁLLÍTÁSA ---
+        // --- 1. CELLA GYÁRAK BEÁLLÍTÁSA (Változatlan) ---
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
         categoryColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
-
         orderMenuNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         orderMenuPriceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
-
         orderIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         orderTableColumn.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
         orderTimeColumn.setCellValueFactory(new PropertyValueFactory<>("formattedTime"));
         orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
 
-        // --- 2. KERESÉS ÉS SZŰRÉS LOGIKA (Menedzser fül) ---
+        // --- 2. KERESÉS ÉS SZŰRÉS LOGIKA (Változatlan) ---
         FilteredList<MenuItem> filteredData = new FilteredList<>(masterData, p -> true);
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             filteredData.setPredicate(menuItem -> {
@@ -83,7 +79,6 @@ public class HelloController {
         sortedData.comparatorProperty().bind(menuTable.comparatorProperty());
         menuTable.setItems(sortedData);
 
-        // --- 3. KERESÉS ÉS SZŰRÉS LOGIKA (Rendelésfelvétel fül) ---
         FilteredList<MenuItem> orderFilteredData = new FilteredList<>(masterData, p -> true);
         orderSearchField.textProperty().addListener((observable, oldValue, newValue) -> {
             orderFilteredData.setPredicate(menuItem -> {
@@ -95,56 +90,75 @@ public class HelloController {
         });
         SortedList<MenuItem> orderSortedData = new SortedList<>(orderFilteredData);
         orderSortedData.comparatorProperty().bind(orderMenuTable.comparatorProperty());
-        orderMenuTable.setItems(orderSortedData); // Itt kötjük össze a szűrt listával!
+        orderMenuTable.setItems(orderSortedData);
 
-        // --- 4. FIGYELŐK ÉS EGYÉB BEÁLLÍTÁSOK ---
-        menuTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                editNameField.setText(newSelection.getName());
-                editPriceField.setText(String.valueOf(newSelection.getPrice()));
-                for (Category cat : editCategoryComboBox.getItems()) {
-                    if (cat.getName().equals(newSelection.getCategoryName())) {
-                        editCategoryComboBox.setValue(cat);
-                        break;
-                    }
-                }
-            }
-        });
-
-        categoryListView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                categoryNameField.setText(newSelection.getName());
-                if (newSelection.getParentId() != null) {
-                    for (Category cat : parentCategoryComboBox.getItems()) {
-                        if (cat.getId() == newSelection.getParentId()) {
-                            parentCategoryComboBox.setValue(cat);
-                            break;
-                        }
-                    }
-                } else {
-                    parentCategoryComboBox.setValue(null);
-                }
-            }
-        });
-
+        // --- 3. FIGYELŐK (Itt van a módosítás!) ---
         activeOrdersTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                List<String> details = DatabaseConnection.getOrderDetails(newSelection.getId());
+                // Itt most már ActiveOrderItem listát kapunk az adatbázisból
+                List<ActiveOrderItem> details = DatabaseConnection.getOrderDetailsForEditing(newSelection.getId());
                 activeOrderDetailsList.setItems(FXCollections.observableArrayList(details));
             } else {
                 activeOrderDetailsList.getItems().clear();
             }
         });
 
+        // Dupla kattintás esemény a szerkesztéshez
+        activeOrderDetailsList.setOnMouseClicked(event -> {
+            if (event.getButton().equals(MouseButton.PRIMARY) && event.getClickCount() == 2) {
+                handleEditOrderItem();
+            }
+        });
+
+        // ... (Többi inicializálás változatlan)
         tableNumberSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 50, 1));
         basketListView.setItems(basket);
         setupNumberValidation(newPriceField);
         setupNumberValidation(editPriceField);
-
-        // --- 5. ADATOK BETÖLTÉSE ---
         loadMenuItems();
         refreshActiveOrders();
         refreshCategoryLists();
+    }
+
+    @FXML
+    protected void handleEditOrderItem() {
+        ActiveOrderItem selected = activeOrderDetailsList.getSelectionModel().getSelectedItem();
+        Order selectedOrder = activeOrdersTable.getSelectionModel().getSelectedItem();
+
+        if (selected == null || selectedOrder == null) {
+            showAlert("Figyelem", "Válassz ki egy rendelést és egy tételt is!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        TextInputDialog dialog = new TextInputDialog(String.valueOf(selected.getQuantity()));
+        dialog.setTitle("Tétel szerkesztése");
+        dialog.setHeaderText("Szerkesztés: " + selected.getName());
+        dialog.setContentText("Új mennyiség (0 = törlés):");
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(quantityStr -> {
+            try {
+                int newQty = Integer.parseInt(quantityStr);
+                if (newQty > 0) {
+                    DatabaseConnection.updateOrderItemQuantity(selected.getOrderItemId(), newQty);
+                } else {
+                    DatabaseConnection.deleteOrderItem(selected.getOrderItemId());
+                }
+
+                // Frissítjük a végösszeget az adatbázisban
+                DatabaseConnection.recalculateOrderTotal(selectedOrder.getId());
+
+                // Felület frissítése
+                refreshActiveOrders();
+
+                // Újra lekérjük a tételeket, hogy a lista azonnal frissüljön
+                List<ActiveOrderItem> details = DatabaseConnection.getOrderDetailsForEditing(selectedOrder.getId());
+                activeOrderDetailsList.setItems(FXCollections.observableArrayList(details));
+
+            } catch (NumberFormatException e) {
+                showAlert("Hiba", "Kérlek érvényes számot adj meg!", Alert.AlertType.ERROR);
+            }
+        });
     }
 
     private void setupNumberValidation(TextField textField) {
