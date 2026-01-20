@@ -5,51 +5,68 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-
 import java.util.List;
 
 public class HelloController {
 
-    @FXML
-    private TableView<MenuItem> menuTable;
-    @FXML
-    private TableColumn<MenuItem, String> nameColumn;
-    @FXML
-    private TableColumn<MenuItem, Double> priceColumn;
-    @FXML
-    private TableColumn<MenuItem, String> categoryColumn;
+    @FXML private TableView<MenuItem> menuTable;
+    @FXML private TableColumn<MenuItem, String> nameColumn;
+    @FXML private TableColumn<MenuItem, Double> priceColumn;
+    @FXML private TableColumn<MenuItem, String> categoryColumn;
 
-    @FXML
-    private TextField nameField;
-    @FXML
-    private TextField priceField;
-    @FXML
-    private ComboBox<Category> categoryComboBox;
+    // MEZŐK AZ ÚJ ÉTELHEZ (Hozzáadás fül)
+    @FXML private TextField newNameField;
+    @FXML private TextField newPriceField;
+    @FXML private ComboBox<Category> newCategoryComboBox;
+
+    // MEZŐK A SZERKESZTÉSHEZ (Kezelés fül)
+    @FXML private TextField editNameField;
+    @FXML private TextField editPriceField;
+    @FXML private ComboBox<Category> editCategoryComboBox;
 
     public void initialize() {
-        // Oszlopok összekötése a MenuItem mezőivel
+        // Táblázat beállítása
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
         categoryColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
-        // ComboBox feltöltése kategóriákkal
-        categoryComboBox.setItems(FXCollections.observableArrayList(DatabaseConnection.getAllCategories()));
 
+        // Mindkét ComboBox feltöltése
+        ObservableList<Category> categories = FXCollections.observableArrayList(DatabaseConnection.getAllCategories());
+        newCategoryComboBox.setItems(categories);
+        editCategoryComboBox.setItems(categories);
+
+        // Kiválasztás figyelése: Ha kattintasz a táblázatban, a SZERKESZTŐ mezőkbe tölti az adatot
         menuTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                nameField.setText(newSelection.getName());
-                priceField.setText(String.valueOf(newSelection.getPrice()));
-                // Kategória kikeresése a ComboBox-ban név alapján
-                for (Category cat : categoryComboBox.getItems()) {
+                editNameField.setText(newSelection.getName());
+                editPriceField.setText(String.valueOf(newSelection.getPrice()));
+                for (Category cat : editCategoryComboBox.getItems()) {
                     if (cat.getName().equals(newSelection.getCategoryName())) {
-                        categoryComboBox.setValue(cat);
+                        editCategoryComboBox.setValue(cat);
                         break;
                     }
                 }
             }
         });
 
-        // Táblázat feltöltése ételekkel
+        // Szám-validátor mindkét ár mezőhöz
+        setupNumberValidation(newPriceField);
+        setupNumberValidation(editPriceField);
+
         loadMenuItems();
+    }
+
+    private void setupNumberValidation(TextField textField) {
+        textField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*(\\.\\d*)?")) {
+                textField.setText(oldValue);
+            }
+        });
+    }
+
+    private void loadMenuItems() {
+        List<MenuItem> items = DatabaseConnection.getMenuItemsForGUI();
+        menuTable.setItems(FXCollections.observableArrayList(items));
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {
@@ -60,96 +77,74 @@ public class HelloController {
         alert.showAndWait();
     }
 
-    private void loadMenuItems() {
-        List<MenuItem> items = DatabaseConnection.getMenuItemsForGUI();
-        ObservableList<MenuItem> observableList = FXCollections.observableArrayList(items);
-        menuTable.setItems(observableList);
-    }
-
     @FXML
     protected void onAddButtonClick() {
         try {
-            String name = nameField.getText();
-            String priceText = priceField.getText();
-            Category selectedCategory = categoryComboBox.getValue();
+            String name = newNameField.getText();
+            String priceText = newPriceField.getText();
+            Category selectedCategory = newCategoryComboBox.getValue();
 
-            if (name.isEmpty() || priceText.isEmpty() || selectedCategory == null) {
-                showAlert("Hiba", "Kérlek tölts ki minden mezőt!", Alert.AlertType.WARNING);
-                return;
+            if (validateAndProcess(name, priceText, selectedCategory)) {
+                double price = Double.parseDouble(priceText);
+                if (DatabaseConnection.addMenuItem(name, price, selectedCategory.getId())) {
+                    showAlert("Siker", "Étel hozzáadva!", Alert.AlertType.INFORMATION);
+                    newNameField.clear();
+                    newPriceField.clear();
+                    newCategoryComboBox.setValue(null);
+                    loadMenuItems();
+                }
             }
-
-            double price = Double.parseDouble(priceText);
-            boolean success = DatabaseConnection.addMenuItem(name, price, selectedCategory.getId());
-
-            if (success) {
-                showAlert("Siker", "Étel sikeresen hozzáadva!", Alert.AlertType.INFORMATION);
-                nameField.clear();
-                priceField.clear();
-                categoryComboBox.setValue(null);
-                loadMenuItems();
-            } else {
-                showAlert("Hiba", "Nem sikerült a mentés az adatbázisba!", Alert.AlertType.ERROR);
-            }
-        } catch (NumberFormatException e) {
-            showAlert("Hiba", "Az ár formátuma nem megfelelő!", Alert.AlertType.ERROR);
-        }
-    }
-
-    @FXML
-    protected void onDeleteButtonClick() {
-        MenuItem selectedItem = menuTable.getSelectionModel().getSelectedItem();
-
-        // 1. Ellenőrizzük, van-e kijelölés
-        if (selectedItem == null) {
-            showAlert("Figyelem", "Válassz ki egy elemet a törléshez!", Alert.AlertType.WARNING);
-            return;
-        }
-
-        // 2. Megerősítő kérő ablak (CONFIRMATION)
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Törlés megerősítése");
-        alert.setHeaderText(selectedItem.getName() + " törlése");
-        alert.setContentText("Biztosan el akarod távolítani ezt a tételt az étlapról?");
-
-        // 3. Megvárjuk a gombnyomást
-        var result = alert.showAndWait();
-
-        // 4. Csak akkor törlünk, ha az OK gombra kattintott
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            DatabaseConnection.deleteMenuItem(selectedItem.getId());
-            showAlert("Siker", "Az elem törölve lett!", Alert.AlertType.INFORMATION);
-            loadMenuItems();
+        } catch (Exception e) {
+            showAlert("Hiba", "Váratlan hiba történt!", Alert.AlertType.ERROR);
         }
     }
 
     @FXML
     protected void onUpdateButtonClick() {
         MenuItem selectedItem = menuTable.getSelectionModel().getSelectedItem();
-
         if (selectedItem == null) {
-            showAlert("Hiba", "Válassz ki egy elemet a módosításhoz!", Alert.AlertType.WARNING);
+            showAlert("Hiba", "Válassz ki egy elemet a táblázatban!", Alert.AlertType.WARNING);
             return;
         }
 
-        try {
-            String name = nameField.getText();
-            double price = Double.parseDouble(priceField.getText());
-            Category selectedCategory = categoryComboBox.getValue();
+        String name = editNameField.getText();
+        String priceText = editPriceField.getText();
+        Category selectedCategory = editCategoryComboBox.getValue();
 
-            if (name.isEmpty() || selectedCategory == null) {
-                showAlert("Hiba", "Minden mezőt tölts ki!", Alert.AlertType.WARNING);
-                return;
-            }
-
-            boolean success = DatabaseConnection.updateMenuItem(selectedItem.getId(), name, price, selectedCategory.getId());
-
-            if (success) {
+        if (validateAndProcess(name, priceText, selectedCategory)) {
+            double price = Double.parseDouble(priceText);
+            if (DatabaseConnection.updateMenuItem(selectedItem.getId(), name, price, selectedCategory.getId())) {
                 showAlert("Siker", "Tétel frissítve!", Alert.AlertType.INFORMATION);
-                loadMenuItems(); // Táblázat újratöltése
+                loadMenuItems();
             }
-        } catch (NumberFormatException e) {
-            showAlert("Hiba", "Hibás ár formátum!", Alert.AlertType.ERROR);
         }
     }
 
+    private boolean validateAndProcess(String name, String priceText, Category category) {
+        if (name.isEmpty() || priceText.isEmpty() || category == null) {
+            showAlert("Hiba", "Minden mező kitöltése kötelező!", Alert.AlertType.WARNING);
+            return false;
+        }
+        if (Double.parseDouble(priceText) <= 0) {
+            showAlert("Hiba", "Az árnak pozitívnak kell lennie!", Alert.AlertType.WARNING);
+            return false;
+        }
+        return true;
+    }
+
+    @FXML
+    protected void onDeleteButtonClick() {
+        MenuItem selectedItem = menuTable.getSelectionModel().getSelectedItem();
+        if (selectedItem == null) {
+            showAlert("Figyelem", "Válassz ki egy elemet!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Biztosan törlöd: " + selectedItem.getName() + "?", ButtonType.OK, ButtonType.CANCEL);
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            DatabaseConnection.deleteMenuItem(selectedItem.getId());
+            loadMenuItems();
+            showAlert("Siker", "Törölve!", Alert.AlertType.INFORMATION);
+        }
+    }
 }

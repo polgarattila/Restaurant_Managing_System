@@ -1,31 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
-<VBox alignment="CENTER" spacing="20.0" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.restaurant.system.restaurantmanagingsystem.HelloController">
-    <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
-    </padding>
+<TabPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.restaurant.system.restaurantmanagingsystem.HelloController" tabClosingPolicy="UNAVAILABLE">
+    <tabs>
+        <Tab text="Étlap Kezelése">
+            <VBox spacing="10" alignment="CENTER">
+                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                <TableView fx:id="menuTable" prefHeight="350.0" prefWidth="600.0">
+                    <columns>
+                        <TableColumn fx:id="nameColumn" text="Étel név" prefWidth="150.0" />
+                        <TableColumn fx:id="priceColumn" text="Ár (Ft)" prefWidth="100.0" />
+                        <TableColumn fx:id="categoryColumn" text="Kategória" prefWidth="150.0" />
+                    </columns>
+                </TableView>
 
-    <Label text="Éttermi Menü Kezelő" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+                <HBox spacing="10" alignment="CENTER">
+                    <TextField fx:id="editNameField" promptText="Név módosítása" />
+                    <TextField fx:id="editPriceField" promptText="Ár módosítása" prefWidth="80.0" />
+                    <ComboBox fx:id="editCategoryComboBox" promptText="Kategória" />
+                </HBox>
 
-    <TableView fx:id="menuTable" prefHeight="300.0" prefWidth="600.0">
-        <columns>
-            <TableColumn fx:id="nameColumn" text="Étel név" prefWidth="200.0" />
-            <TableColumn fx:id="priceColumn" text="Ár (Ft)" prefWidth="100.0" />
-            <TableColumn fx:id="categoryColumn" text="Kategória" prefWidth="150.0" />
-        </columns>
-    </TableView>
+                <HBox spacing="20" alignment="CENTER">
+                    <Button text="Módosítás Mentése" onAction="#onUpdateButtonClick" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+                    <Button text="Kijelölt Törlése" onAction="#onDeleteButtonClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+                </HBox>
+            </VBox>
+        </Tab>
 
-    <HBox spacing="10.0" alignment="CENTER">
-        <TextField fx:id="nameField" promptText="Étel neve" />
-        <TextField fx:id="priceField" promptText="Ár" prefWidth="80.0" />
-        <ComboBox fx:id="categoryComboBox" promptText="Válassz kategóriát" prefWidth="150.0" />
-        <Button text="Hozzáadás" onAction="#onAddButtonClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
-        <Button text="Módosítás" onAction="#onUpdateButtonClick" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
-        <Button text="Törlés" onAction="#onDeleteButtonClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
-    </HBox>
-</VBox>
+        <Tab text="Új Étel Felvétele">
+            <VBox spacing="20" alignment="CENTER">
+                <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
+                <Label text="Új tétel hozzáadása az adatbázishoz" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <GridPane vgap="10" hgap="10" alignment="CENTER">
+                    <Label text="Név:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="newNameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                    <Label text="Ár:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <TextField fx:id="newPriceField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                    <Label text="Kategória:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="newCategoryComboBox" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                </GridPane>
+                <Button text="Hozzáadás az Étlaphoz" onAction="#onAddButtonClick" prefWidth="200" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+            </VBox>
+        </Tab>
+    </tabs>
+</TabPane>
