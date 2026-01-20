@@ -187,4 +187,19 @@ public class DatabaseConnection {
         }
         return menuList;
     }
+
+    public static List<Category> getAllCategories() {
+        List<Category> categories = new ArrayList<>();
+        String sql = "SELECT id, name FROM categories";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                categories.add(new Category(rs.getInt("id"), rs.getString("name")));
+            }
+        } catch (SQLException e) {
+            System.out.println("Hiba a kategóriák lekérésekor: " + e.getMessage());
+        }
+        return categories;
+    }
 }

@@ -2,17 +2,28 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
 <VBox alignment="CENTER" spacing="20.0" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.restaurant.system.restaurantmanagingsystem.HelloController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
 
-    <Label text="Éttermi Menü" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+    <Label text="Éttermi Menü Kezelő" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
 
-    <TableView fx:id="menuTable" prefHeight="400.0" prefWidth="600.0">
+    <TableView fx:id="menuTable" prefHeight="300.0" prefWidth="600.0">
         <columns>
             <TableColumn fx:id="nameColumn" text="Étel név" prefWidth="200.0" />
             <TableColumn fx:id="priceColumn" text="Ár (Ft)" prefWidth="100.0" />
             <TableColumn fx:id="categoryColumn" text="Kategória" prefWidth="150.0" />
         </columns>
     </TableView>
+
+    <HBox spacing="10.0" alignment="CENTER">
+        <TextField fx:id="nameField" promptText="Étel neve" />
+        <TextField fx:id="priceField" promptText="Ár" prefWidth="80.0" />
+        <ComboBox fx:id="categoryComboBox" promptText="Válassz kategóriát" prefWidth="150.0" />
+        <Button text="Hozzáadás" onAction="#onAddButtonClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+    </HBox>
 </VBox>
