@@ -1,6 +1,8 @@
 package com.restaurant.system.restaurantmanagingsystem;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DatabaseConnection {
     private static final String URL = "jdbc:mysql://localhost:3306/restaurant_db";
@@ -157,5 +159,32 @@ public class DatabaseConnection {
         } catch (SQLException e) {
             System.out.println("Hiba a JOIN lekérdezés során: " + e.getMessage());
         }
+    }
+
+    public static List<MenuItem> getMenuItemsForGUI() {
+        List<MenuItem> menuList = new ArrayList<>();
+        String sql = "SELECT m.id, m.name, m.price, c.name AS category_name " +
+                "FROM menu_items m " +
+                "JOIN categories c ON m.category_id = c.id";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                // Létrehozunk egy tárgyat az adatbázis sorából
+                MenuItem item = new MenuItem(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getDouble("price"),
+                        rs.getString("category_name")
+                );
+                // Hozzáadjuk a listához
+                menuList.add(item);
+            }
+        } catch (SQLException e) {
+            System.out.println("Hiba az adatok lekérésekor: " + e.getMessage());
+        }
+        return menuList;
     }
 }
