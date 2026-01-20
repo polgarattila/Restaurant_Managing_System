@@ -52,6 +52,8 @@ public class HelloController {
     @FXML private TableColumn<Order, Integer> orderTableColumn;
     @FXML private TableColumn<Order, String> orderTimeColumn; // String lesz a formázott idő miatt
     @FXML private TableColumn<Order, Double> orderTotalColumn;
+    @FXML private ListView<String> activeOrderDetailsList;
+    @FXML private TextField orderSearchField;
 
     // A kosár tartalma a memóriában
     private ObservableList<BasketItem> basket = FXCollections.observableArrayList();
@@ -82,6 +84,33 @@ public class HelloController {
         SortedList<MenuItem> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(menuTable.comparatorProperty());
         menuTable.setItems(sortedData);
+
+        // --- KERESÉS A RENDELÉSFELVÉTELNÉL ---
+// Létrehozunk egy szűrhető listát a masterData-ból
+        FilteredList<MenuItem> orderFilteredData = new FilteredList<>(masterData, p -> true);
+
+// Figyeljük az orderSearchField változását
+        orderSearchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            orderFilteredData.setPredicate(menuItem -> {
+                if (newValue == null || newValue.isEmpty()) {
+                    return true;
+                }
+                String lowerCaseFilter = newValue.toLowerCase();
+
+                // Keresés névben vagy kategóriában
+                if (menuItem.getName().toLowerCase().contains(lowerCaseFilter)) {
+                    return true;
+                } else if (menuItem.getCategoryName().toLowerCase().contains(lowerCaseFilter)) {
+                    return true;
+                }
+                return false;
+            });
+        });
+
+// Összekötjük a szűrt listát a táblázattal
+        SortedList<MenuItem> orderSortedData = new SortedList<>(orderFilteredData);
+        orderSortedData.comparatorProperty().bind(orderMenuTable.comparatorProperty());
+        orderMenuTable.setItems(orderSortedData);
 
         // Kiválasztás figyelése
         menuTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
@@ -134,9 +163,16 @@ public class HelloController {
         orderTimeColumn.setCellValueFactory(new PropertyValueFactory<>("formattedTime"));
         orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
 
+        activeOrdersTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                List<String> details = DatabaseConnection.getOrderDetails(newSelection.getId());
+                activeOrderDetailsList.setItems(FXCollections.observableArrayList(details));
+            } else {
+                activeOrderDetailsList.getItems().clear();
+            }
+        });
+
         refreshActiveOrders();
-
-
         refreshCategoryLists();
         refreshOrderMenu();
         loadMenuItems();

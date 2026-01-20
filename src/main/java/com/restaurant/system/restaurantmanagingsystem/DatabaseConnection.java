@@ -198,4 +198,28 @@ public class DatabaseConnection {
             pstmt.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
+
+    public static List<String> getOrderDetails(int orderId) {
+        List<String> details = new ArrayList<>();
+        String sql = "SELECT m.name, oi.quantity, oi.price_at_time " +
+                "FROM order_items oi " +
+                "JOIN menu_items m ON oi.menu_item_id = m.id " +
+                "WHERE oi.order_id = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String row = rs.getString("name") + " x" +
+                            rs.getInt("quantity") + " (" +
+                            (int)rs.getDouble("price_at_time") + " Ft/db)";
+                    details.add(row);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return details;
+    }
 }
