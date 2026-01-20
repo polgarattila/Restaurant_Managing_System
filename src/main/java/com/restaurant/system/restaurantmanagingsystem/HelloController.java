@@ -18,19 +18,16 @@ public class HelloController {
     @FXML private TableColumn<MenuItem, Double> priceColumn;
     @FXML private TableColumn<MenuItem, String> categoryColumn;
 
-    @FXML private TextField searchField; // Keresőmező
+    @FXML private TextField searchField;
 
-    // MEZŐK AZ ÚJ ÉTELHEZ
     @FXML private TextField newNameField;
     @FXML private TextField newPriceField;
     @FXML private ComboBox<Category> newCategoryComboBox;
 
-    // MEZŐK A SZERKESZTÉSHEZ
     @FXML private TextField editNameField;
     @FXML private TextField editPriceField;
     @FXML private ComboBox<Category> editCategoryComboBox;
 
-    // STATISZTIKA LABEL-EK
     @FXML private Label totalItemsLabel;
     @FXML private Label avgPriceLabel;
     @FXML private Label maxPriceLabel;
@@ -39,7 +36,6 @@ public class HelloController {
     @FXML private TextField categoryNameField;
     @FXML private ComboBox<Category> parentCategoryComboBox;
 
-    // Új FXML mezők a rendelés fülhöz
     @FXML private TableView<MenuItem> orderMenuTable;
     @FXML private TableColumn<MenuItem, String> orderMenuNameColumn;
     @FXML private TableColumn<MenuItem, Double> orderMenuPriceColumn;
@@ -50,69 +46,58 @@ public class HelloController {
     @FXML private TableView<Order> activeOrdersTable;
     @FXML private TableColumn<Order, Integer> orderIdColumn;
     @FXML private TableColumn<Order, Integer> orderTableColumn;
-    @FXML private TableColumn<Order, String> orderTimeColumn; // String lesz a formázott idő miatt
+    @FXML private TableColumn<Order, String> orderTimeColumn;
     @FXML private TableColumn<Order, Double> orderTotalColumn;
     @FXML private ListView<String> activeOrderDetailsList;
     @FXML private TextField orderSearchField;
 
-    // A kosár tartalma a memóriában
     private ObservableList<BasketItem> basket = FXCollections.observableArrayList();
-
-    // Ez a lista tárolja az összes adatot a memóriában
     private ObservableList<MenuItem> masterData = FXCollections.observableArrayList();
 
     public void initialize() {
+        // --- 1. CELLA GYÁRAK BEÁLLÍTÁSA ---
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
         categoryColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
 
-        ObservableList<Category> categories = FXCollections.observableArrayList(DatabaseConnection.getAllCategories());
-        newCategoryComboBox.setItems(categories);
-        editCategoryComboBox.setItems(categories);
+        orderMenuNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        orderMenuPriceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
 
-        // --- KERESÉS ÉS SZŰRÉS LOGIKA ---
+        orderIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        orderTableColumn.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
+        orderTimeColumn.setCellValueFactory(new PropertyValueFactory<>("formattedTime"));
+        orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
+
+        // --- 2. KERESÉS ÉS SZŰRÉS LOGIKA (Menedzser fül) ---
         FilteredList<MenuItem> filteredData = new FilteredList<>(masterData, p -> true);
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             filteredData.setPredicate(menuItem -> {
                 if (newValue == null || newValue.isEmpty()) return true;
                 String lowerCaseFilter = newValue.toLowerCase();
-                if (menuItem.getName().toLowerCase().contains(lowerCaseFilter)) return true;
-                return menuItem.getCategoryName().toLowerCase().contains(lowerCaseFilter);
+                return menuItem.getName().toLowerCase().contains(lowerCaseFilter) ||
+                        menuItem.getCategoryName().toLowerCase().contains(lowerCaseFilter);
             });
-            refreshStatistics(); // Szűrésnél is frissülhet a stat (opcionális)
+            refreshStatistics();
         });
         SortedList<MenuItem> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(menuTable.comparatorProperty());
         menuTable.setItems(sortedData);
 
-        // --- KERESÉS A RENDELÉSFELVÉTELNÉL ---
-// Létrehozunk egy szűrhető listát a masterData-ból
+        // --- 3. KERESÉS ÉS SZŰRÉS LOGIKA (Rendelésfelvétel fül) ---
         FilteredList<MenuItem> orderFilteredData = new FilteredList<>(masterData, p -> true);
-
-// Figyeljük az orderSearchField változását
         orderSearchField.textProperty().addListener((observable, oldValue, newValue) -> {
             orderFilteredData.setPredicate(menuItem -> {
-                if (newValue == null || newValue.isEmpty()) {
-                    return true;
-                }
+                if (newValue == null || newValue.isEmpty()) return true;
                 String lowerCaseFilter = newValue.toLowerCase();
-
-                // Keresés névben vagy kategóriában
-                if (menuItem.getName().toLowerCase().contains(lowerCaseFilter)) {
-                    return true;
-                } else if (menuItem.getCategoryName().toLowerCase().contains(lowerCaseFilter)) {
-                    return true;
-                }
-                return false;
+                return menuItem.getName().toLowerCase().contains(lowerCaseFilter) ||
+                        menuItem.getCategoryName().toLowerCase().contains(lowerCaseFilter);
             });
         });
-
-// Összekötjük a szűrt listát a táblázattal
         SortedList<MenuItem> orderSortedData = new SortedList<>(orderFilteredData);
         orderSortedData.comparatorProperty().bind(orderMenuTable.comparatorProperty());
-        orderMenuTable.setItems(orderSortedData);
+        orderMenuTable.setItems(orderSortedData); // Itt kötjük össze a szűrt listával!
 
-        // Kiválasztás figyelése
+        // --- 4. FIGYELŐK ÉS EGYÉB BEÁLLÍTÁSOK ---
         menuTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 editNameField.setText(newSelection.getName());
@@ -126,14 +111,9 @@ public class HelloController {
             }
         });
 
-        setupNumberValidation(newPriceField);
-        setupNumberValidation(editPriceField);
-
-        // Kategória lista kijelölésének figyelése
         categoryListView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 categoryNameField.setText(newSelection.getName());
-                // Beállítjuk a szülőt a ComboBox-ban (ha van)
                 if (newSelection.getParentId() != null) {
                     for (Category cat : parentCategoryComboBox.getItems()) {
                         if (cat.getId() == newSelection.getParentId()) {
@@ -147,22 +127,6 @@ public class HelloController {
             }
         });
 
-        // Spinner beállítása: 1-től 50-ig lehet asztalszámot választani
-        tableNumberSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 50, 1));
-
-        // Étlap táblázat oszlopainak beállítása (ugyanaz, mint az első fülön)
-        orderMenuNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        orderMenuPriceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
-
-        // A kosár lista összekötése a vizuális ListView-val
-        basketListView.setItems(basket);
-
-        orderIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
-        orderTableColumn.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-        // Itt a getFormattedTime() metódust használjuk az Order osztályból a szép dátumhoz:
-        orderTimeColumn.setCellValueFactory(new PropertyValueFactory<>("formattedTime"));
-        orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
-
         activeOrdersTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 List<String> details = DatabaseConnection.getOrderDetails(newSelection.getId());
@@ -172,10 +136,15 @@ public class HelloController {
             }
         });
 
+        tableNumberSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 50, 1));
+        basketListView.setItems(basket);
+        setupNumberValidation(newPriceField);
+        setupNumberValidation(editPriceField);
+
+        // --- 5. ADATOK BETÖLTÉSE ---
+        loadMenuItems();
         refreshActiveOrders();
         refreshCategoryLists();
-        refreshOrderMenu();
-        loadMenuItems();
     }
 
     private void setupNumberValidation(TextField textField) {
@@ -188,12 +157,12 @@ public class HelloController {
 
     private void loadMenuItems() {
         List<MenuItem> items = DatabaseConnection.getMenuItemsForGUI();
-        masterData.setAll(items); // Frissíti a menedzser táblázatot (a FilteredList-en keresztül)
-
-        // Frissítjük a rendelés fül táblázatát is a legfrissebb adatokkal
-        orderMenuTable.setItems(FXCollections.observableArrayList(items));
-
+        masterData.setAll(items); // A TableView-k automatikusan frissülnek a SortedList-en keresztül
         refreshStatistics();
+    }
+
+    private void refreshOrderMenu() {
+        loadMenuItems(); // Csak a masterData-t frissítjük
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {
@@ -202,13 +171,6 @@ public class HelloController {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
-    }
-
-    private void refreshOrderMenu() {
-        // getAllMenuItems helyett használd azt, ami már létezik:
-        List<MenuItem> allItems = DatabaseConnection.getMenuItemsForGUI();
-        ObservableList<MenuItem> menuItems = FXCollections.observableArrayList(allItems);
-        orderMenuTable.setItems(menuItems);
     }
 
     @FXML
@@ -292,15 +254,8 @@ public class HelloController {
         }
 
         int total = masterData.size();
-        double sum = 0;
-        MenuItem expensive = masterData.get(0);
-
-        for (MenuItem item : masterData) {
-            sum += item.getPrice();
-            if (item.getPrice() > expensive.getPrice()) {
-                expensive = item;
-            }
-        }
+        double sum = masterData.stream().mapToDouble(MenuItem::getPrice).sum();
+        MenuItem expensive = masterData.stream().max((a, b) -> Double.compare(a.getPrice(), b.getPrice())).orElse(masterData.get(0));
 
         totalItemsLabel.setText(String.valueOf(total));
         avgPriceLabel.setText(String.format("%.0f Ft", sum / total));
@@ -310,8 +265,7 @@ public class HelloController {
     @FXML
     protected void onAddCategoryClick() {
         String name = categoryNameField.getText();
-        Category parent = parentCategoryComboBox.getValue(); // Lehet null!
-
+        Category parent = parentCategoryComboBox.getValue();
         if (!name.isEmpty()) {
             DatabaseConnection.addCategory(name, (parent != null ? parent.getId() : null));
             categoryNameField.clear();
@@ -322,90 +276,51 @@ public class HelloController {
     @FXML
     protected void onUpdateCategoryClick() {
         Category selected = categoryListView.getSelectionModel().getSelectedItem();
-
-        // 1. Ellenőrizzük, van-e kijelölés
         if (selected == null) {
-            showAlert("Figyelem", "Kérlek, válassz ki egy kategóriát a listából a módosításhoz!", Alert.AlertType.WARNING);
+            showAlert("Figyelem", "Válassz ki egy kategóriát!", Alert.AlertType.WARNING);
             return;
         }
-
         String newName = categoryNameField.getText();
         Category parent = parentCategoryComboBox.getValue();
         Integer parentId = (parent != null) ? parent.getId() : null;
 
-        // 2. Üres név ellenőrzése
-        if (newName.isEmpty()) {
-            showAlert("Hiba", "A kategória neve nem lehet üres!", Alert.AlertType.ERROR);
-            return;
+        if (!newName.isEmpty() && (parentId == null || parentId != selected.getId())) {
+            DatabaseConnection.updateCategory(selected.getId(), newName, parentId);
+            refreshCategoryLists();
+            showAlert("Siker", "Kategória frissítve!", Alert.AlertType.INFORMATION);
         }
-
-        // 3. Önhivatkozás elleni védelem (ne lehessen önmaga szülője)
-        if (parentId != null && parentId == selected.getId()) {
-            showAlert("Logikai hiba", "Egy kategória nem lehet önmaga szülője! Kérlek, válassz másik szülőt vagy hagyd üresen.", Alert.AlertType.WARNING);
-            return;
-        }
-
-        // 4. Módosítás végrehajtása
-        DatabaseConnection.updateCategory(selected.getId(), newName, parentId);
-        refreshCategoryLists();
-        showAlert("Siker", "A kategória (" + newName + ") sikeresen frissítve lett!", Alert.AlertType.INFORMATION);
     }
 
     @FXML
     protected void onDeleteCategoryClick() {
         Category selected = categoryListView.getSelectionModel().getSelectedItem();
-
-        if (selected == null) {
-            showAlert("Figyelem", "Válassz ki egy kategóriát a törléshez!", Alert.AlertType.WARNING);
-            return;
-        }
-
-        // Megerősítés kérése
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Törlés megerősítése");
-        confirm.setHeaderText("Kategória törlése: " + selected.getName());
-        confirm.setContentText("Biztosan törölni akarod? Ha vannak hozzárendelt ételek vagy alkategóriák, a törlés sikertelen lesz.");
-
+        if (selected == null) return;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Törlöd a kategóriát?", ButtonType.OK, ButtonType.CANCEL);
         if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            // Itt hívjuk meg a boolean visszatérésű metódust
-            boolean success = DatabaseConnection.deleteCategory(selected.getId());
-
-            if (success) {
+            if (DatabaseConnection.deleteCategory(selected.getId())) {
                 refreshCategoryLists();
-                showAlert("Siker", "Kategória eltávolítva.", Alert.AlertType.INFORMATION);
+                showAlert("Siker", "Törölve!", Alert.AlertType.INFORMATION);
             } else {
-                // Ez fut le, ha a RESTRICT szabály miatt a MySQL nem engedte a törlést
-                showAlert("Hiba", "Nem sikerült a törlés! \n\nIndok: Vannak ételek vagy alkategóriák, amik ehhez a kategóriához tartoznak. Előbb ezeket helyezd át vagy töröld!", Alert.AlertType.ERROR);
+                showAlert("Hiba", "Vannak függő elemek!", Alert.AlertType.ERROR);
             }
         }
     }
 
     private void refreshCategoryLists() {
         List<Category> allCategories = DatabaseConnection.getAllCategories();
-
-        // 1. Hierarchikus sorrendbe rendezzük a listát
         List<Category> hierarchicList = new ArrayList<>();
         sortCategoriesHierarchical(allCategories, null, hierarchicList);
-
         ObservableList<Category> categories = FXCollections.observableArrayList(hierarchicList);
-
-        // 2. Beállítjuk a listát
         categoryListView.setItems(categories);
-
-        // 3. A ComboBoxoknál is fontos a hierarchikus sorrend a könnyebb átláthatóság miatt
         parentCategoryComboBox.setItems(categories);
         newCategoryComboBox.setItems(categories);
         editCategoryComboBox.setItems(categories);
     }
 
-    // Segédmetódus a rekurzív rendezéshez
     private void sortCategoriesHierarchical(List<Category> all, Integer parentId, List<Category> result) {
         for (Category c : all) {
-            // Megkeressük azokat, akiknek a parentId-ja megegyezik az éppen keresettel
-            if ((parentId == null && c.getParentId() == null) ||
-                    (parentId != null && parentId.equals(c.getParentId()))) {
+            if ((parentId == null && c.getParentId() == null) || (parentId != null && parentId.equals(c.getParentId()))) {
                 result.add(c);
-                // Rekurzívan megkeressük ennek a kategóriának a gyerekeit is
                 sortCategoriesHierarchical(all, c.getId(), result);
             }
         }
@@ -415,19 +330,16 @@ public class HelloController {
     protected void onAddToBasketClick() {
         MenuItem selected = orderMenuTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
-            // Megnézzük, benne van-e már a kosárban
             boolean found = false;
             for (BasketItem bi : basket) {
                 if (bi.getItem().getId() == selected.getId()) {
-                    bi.addOne(); // Ha benne van, csak a mennyiséget növeljük
+                    bi.addOne();
                     found = true;
                     break;
                 }
             }
-            if (!found) {
-                basket.add(new BasketItem(selected, 1));
-            }
-            basketListView.refresh(); // ListView frissítése a módosult toString() miatt
+            if (!found) basket.add(new BasketItem(selected, 1));
+            basketListView.refresh();
             updateOrderTotal();
         }
     }
@@ -443,17 +355,13 @@ public class HelloController {
             showAlert("Hiba", "Üres a kosár!", Alert.AlertType.WARNING);
             return;
         }
-
         int tableNum = tableNumberSpinner.getValue();
         double total = basket.stream().mapToDouble(bi -> bi.getItem().getPrice() * bi.getQuantity()).sum();
-
-        // Mentés az adatbázisba (a korábban megírt saveOrder metódussal)
         DatabaseConnection.saveOrder(tableNum, new ArrayList<>(basket), total);
-
-        showAlert("Siker", "Rendelés rögzítve az " + tableNum + ". asztalhoz!", Alert.AlertType.INFORMATION);
-
+        showAlert("Siker", "Rendelés rögzítve!", Alert.AlertType.INFORMATION);
         basket.clear();
         updateOrderTotal();
+        refreshActiveOrders();
     }
 
     @FXML
@@ -465,23 +373,11 @@ public class HelloController {
     @FXML
     protected void onFinalizeOrderClick() {
         Order selected = activeOrdersTable.getSelectionModel().getSelectedItem();
-
-        if (selected == null) {
-            showAlert("Figyelem", "Válassz ki egy rendelést a fizetéshez!", Alert.AlertType.WARNING);
-            return;
-        }
-
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Fizetés megerősítése");
-        confirm.setHeaderText(selected.getTableNumber() + ". asztal fizetése");
-        confirm.setContentText("Végösszeg: " + (int)selected.getTotalPrice() + " Ft\nSzeretnéd lezárni a rendelést?");
-
+        if (selected == null) return;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Lezárod a rendelést?", ButtonType.OK, ButtonType.CANCEL);
         if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            // Frissítjük a státuszt az adatbázisban
             DatabaseConnection.updateOrderStatus(selected.getId(), "FIZETVE");
-            refreshActiveOrders(); // Frissítjük a listát
-            showAlert("Siker", "A rendelés sikeresen lezárva és kifizetve.", Alert.AlertType.INFORMATION);
+            refreshActiveOrders();
         }
     }
-
 }
