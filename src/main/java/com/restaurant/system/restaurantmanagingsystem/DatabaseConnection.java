@@ -102,4 +102,27 @@ public class DatabaseConnection {
             return false;
         }
     }
+
+    public static void addCategory(String name) {
+        String sql = "INSERT INTO categories (name) VALUES (?)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Hiba kategória hozzáadásakor: " + e.getMessage());
+        }
+    }
+
+    public static void deleteCategory(int id) {
+        String sql = "DELETE FROM categories WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            // Fontos: Itt hiba lesz, ha van étel az adott kategóriában (Foreign Key constraint)
+            System.out.println("Hiba: Nem törölhető kategória, amíg tartozik hozzá étel!");
+        }
+    }
 }
