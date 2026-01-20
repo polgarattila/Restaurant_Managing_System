@@ -33,6 +33,9 @@ public class HelloController {
     @FXML private Label avgPriceLabel;
     @FXML private Label maxPriceLabel;
 
+    @FXML private ListView<Category> categoryListView;
+    @FXML private TextField categoryNameField;
+
     // Ez a lista tárolja az összes adatot a memóriában
     private ObservableList<MenuItem> masterData = FXCollections.observableArrayList();
 
@@ -196,5 +199,36 @@ public class HelloController {
         totalItemsLabel.setText(String.valueOf(total));
         avgPriceLabel.setText(String.format("%.0f Ft", sum / total));
         maxPriceLabel.setText(expensive.getName() + " (" + (int)expensive.getPrice() + " Ft)");
+    }
+
+    @FXML
+    protected void onAddCategoryClick() {
+        String name = categoryNameField.getText();
+        if (!name.isEmpty()) {
+            DatabaseConnection.addCategory(name);
+            categoryNameField.clear();
+            refreshCategoryLists(); // Frissítjük a listát és a ComboBoxokat is
+        } else {
+            showAlert("Hiba", "Adj meg egy nevet!", Alert.AlertType.WARNING);
+        }
+    }
+
+    @FXML
+    protected void onDeleteCategoryClick() {
+        Category selected = categoryListView.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            DatabaseConnection.deleteCategory(selected.getId());
+            refreshCategoryLists();
+        } else {
+            showAlert("Hiba", "Válassz ki egy kategóriát a törléshez!", Alert.AlertType.WARNING);
+        }
+    }
+
+    private void refreshCategoryLists() {
+        ObservableList<Category> categories = FXCollections.observableArrayList(DatabaseConnection.getAllCategories());
+        categoryListView.setItems(categories);
+        // Nagyon fontos: Frissíteni kell a hozzáadás/módosítás füleken lévő ComboBoxokat is!
+        newCategoryComboBox.setItems(categories);
+        editCategoryComboBox.setItems(categories);
     }
 }

@@ -71,4 +71,19 @@
             <Button text="Adatok Frissítése" onAction="#refreshStatistics" style="-fx-background-color: #607D8B; -fx-text-fill: white;"/>
         </VBox>
     </Tab>
+
+    <Tab text="Kategóriák">
+        <VBox spacing="15" alignment="CENTER">
+            <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+            <Label text="Kategóriák kezelése" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+
+            <ListView fx:id="categoryListView" prefHeight="200.0" prefWidth="300.0" />
+
+            <HBox spacing="10" alignment="CENTER">
+                <TextField fx:id="categoryNameField" promptText="Új kategória neve" />
+                <Button text="Hozzáadás" onAction="#onAddCategoryClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+                <Button text="Törlés" onAction="#onDeleteCategoryClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+            </HBox>
+        </VBox>
+    </Tab>
 </TabPane>
