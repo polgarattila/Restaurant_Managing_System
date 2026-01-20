@@ -39,6 +39,23 @@ public class HelloController {
     @FXML private TextField categoryNameField;
     @FXML private ComboBox<Category> parentCategoryComboBox;
 
+    // Új FXML mezők a rendelés fülhöz
+    @FXML private TableView<MenuItem> orderMenuTable;
+    @FXML private TableColumn<MenuItem, String> orderMenuNameColumn;
+    @FXML private TableColumn<MenuItem, Double> orderMenuPriceColumn;
+    @FXML private ListView<BasketItem> basketListView;
+    @FXML private Spinner<Integer> tableNumberSpinner;
+    @FXML private Label orderTotalLabel;
+
+    @FXML private TableView<Order> activeOrdersTable;
+    @FXML private TableColumn<Order, Integer> orderIdColumn;
+    @FXML private TableColumn<Order, Integer> orderTableColumn;
+    @FXML private TableColumn<Order, String> orderTimeColumn; // String lesz a formázott idő miatt
+    @FXML private TableColumn<Order, Double> orderTotalColumn;
+
+    // A kosár tartalma a memóriában
+    private ObservableList<BasketItem> basket = FXCollections.observableArrayList();
+
     // Ez a lista tárolja az összes adatot a memóriában
     private ObservableList<MenuItem> masterData = FXCollections.observableArrayList();
 
@@ -101,8 +118,27 @@ public class HelloController {
             }
         });
 
-        refreshCategoryLists();
+        // Spinner beállítása: 1-től 50-ig lehet asztalszámot választani
+        tableNumberSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 50, 1));
 
+        // Étlap táblázat oszlopainak beállítása (ugyanaz, mint az első fülön)
+        orderMenuNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        orderMenuPriceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
+
+        // A kosár lista összekötése a vizuális ListView-val
+        basketListView.setItems(basket);
+
+        orderIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        orderTableColumn.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
+        // Itt a getFormattedTime() metódust használjuk az Order osztályból a szép dátumhoz:
+        orderTimeColumn.setCellValueFactory(new PropertyValueFactory<>("formattedTime"));
+        orderTotalColumn.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
+
+        refreshActiveOrders();
+
+
+        refreshCategoryLists();
+        refreshOrderMenu();
         loadMenuItems();
     }
 
@@ -116,8 +152,12 @@ public class HelloController {
 
     private void loadMenuItems() {
         List<MenuItem> items = DatabaseConnection.getMenuItemsForGUI();
-        masterData.setAll(items); // Frissítjük a központi listát
-        refreshStatistics();      // Automatikus statisztika frissítés
+        masterData.setAll(items); // Frissíti a menedzser táblázatot (a FilteredList-en keresztül)
+
+        // Frissítjük a rendelés fül táblázatát is a legfrissebb adatokkal
+        orderMenuTable.setItems(FXCollections.observableArrayList(items));
+
+        refreshStatistics();
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {
@@ -126,6 +166,13 @@ public class HelloController {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private void refreshOrderMenu() {
+        // getAllMenuItems helyett használd azt, ami már létezik:
+        List<MenuItem> allItems = DatabaseConnection.getMenuItemsForGUI();
+        ObservableList<MenuItem> menuItems = FXCollections.observableArrayList(allItems);
+        orderMenuTable.setItems(menuItems);
     }
 
     @FXML
@@ -325,6 +372,79 @@ public class HelloController {
                 // Rekurzívan megkeressük ennek a kategóriának a gyerekeit is
                 sortCategoriesHierarchical(all, c.getId(), result);
             }
+        }
+    }
+
+    @FXML
+    protected void onAddToBasketClick() {
+        MenuItem selected = orderMenuTable.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            // Megnézzük, benne van-e már a kosárban
+            boolean found = false;
+            for (BasketItem bi : basket) {
+                if (bi.getItem().getId() == selected.getId()) {
+                    bi.addOne(); // Ha benne van, csak a mennyiséget növeljük
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                basket.add(new BasketItem(selected, 1));
+            }
+            basketListView.refresh(); // ListView frissítése a módosult toString() miatt
+            updateOrderTotal();
+        }
+    }
+
+    private void updateOrderTotal() {
+        double total = basket.stream().mapToDouble(bi -> bi.getItem().getPrice() * bi.getQuantity()).sum();
+        orderTotalLabel.setText("Összesen: " + (int)total + " Ft");
+    }
+
+    @FXML
+    protected void onPlaceOrderClick() {
+        if (basket.isEmpty()) {
+            showAlert("Hiba", "Üres a kosár!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        int tableNum = tableNumberSpinner.getValue();
+        double total = basket.stream().mapToDouble(bi -> bi.getItem().getPrice() * bi.getQuantity()).sum();
+
+        // Mentés az adatbázisba (a korábban megírt saveOrder metódussal)
+        DatabaseConnection.saveOrder(tableNum, new ArrayList<>(basket), total);
+
+        showAlert("Siker", "Rendelés rögzítve az " + tableNum + ". asztalhoz!", Alert.AlertType.INFORMATION);
+
+        basket.clear();
+        updateOrderTotal();
+    }
+
+    @FXML
+    public void refreshActiveOrders() {
+        List<Order> orders = DatabaseConnection.getActiveOrders();
+        activeOrdersTable.setItems(FXCollections.observableArrayList(orders));
+    }
+
+    @FXML
+    protected void onFinalizeOrderClick() {
+        Order selected = activeOrdersTable.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            showAlert("Figyelem", "Válassz ki egy rendelést a fizetéshez!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Fizetés megerősítése");
+        confirm.setHeaderText(selected.getTableNumber() + ". asztal fizetése");
+        confirm.setContentText("Végösszeg: " + (int)selected.getTotalPrice() + " Ft\nSzeretnéd lezárni a rendelést?");
+
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            // Frissítjük a státuszt az adatbázisban
+            DatabaseConnection.updateOrderStatus(selected.getId(), "FIZETVE");
+            refreshActiveOrders(); // Frissítjük a listát
+            showAlert("Siker", "A rendelés sikeresen lezárva és kifizetve.", Alert.AlertType.INFORMATION);
         }
     }
 

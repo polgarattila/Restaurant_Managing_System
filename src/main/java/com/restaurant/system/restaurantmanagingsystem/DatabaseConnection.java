@@ -142,4 +142,76 @@ public class DatabaseConnection {
             return false; // Nem sikerült (pl. vannak benne ételek)
         }
     }
+
+    public static void saveOrder(int tableNumber, List<BasketItem> basket, double total) {
+        String orderSql = "INSERT INTO orders (table_number, total_price) VALUES (?, ?)";
+        String itemSql = "INSERT INTO order_items (order_id, menu_item_id, quantity, price_at_time) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false); // Tranzakció indítása
+
+            try (PreparedStatement orderPstmt = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS)) {
+                orderPstmt.setInt(1, tableNumber);
+                orderPstmt.setDouble(2, total);
+                orderPstmt.executeUpdate();
+
+                ResultSet rs = orderPstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    int orderId = rs.getInt(1);
+                    try (PreparedStatement itemPstmt = conn.prepareStatement(itemSql)) {
+                        for (BasketItem bi : basket) {
+                            itemPstmt.setInt(1, orderId);
+                            itemPstmt.setInt(2, bi.getItem().getId());
+                            itemPstmt.setInt(3, bi.getQuantity());
+                            itemPstmt.setDouble(4, bi.getItem().getPrice());
+                            itemPstmt.addBatch();
+                        }
+                        itemPstmt.executeBatch();
+                    }
+                }
+                conn.commit(); // Ha minden jó, mentjük
+            } catch (SQLException e) {
+                conn.rollback(); // Hiba esetén visszavonjuk az egészet
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<Order> getActiveOrders() {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT * FROM orders WHERE status = 'FOLYAMATBAN' ORDER BY order_time DESC";
+
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                orders.add(new Order(
+                        rs.getInt("id"),
+                        rs.getInt("table_number"),
+                        rs.getTimestamp("order_time").toLocalDateTime(),
+                        rs.getString("status"),
+                        rs.getDouble("total_price")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    public static void updateOrderStatus(int orderId, String newStatus) {
+        String sql = "UPDATE orders SET status = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newStatus);
+            pstmt.setInt(2, orderId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Hiba a rendelés állapotának frissítésekor: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 }
