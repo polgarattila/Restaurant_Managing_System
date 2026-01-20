@@ -18,19 +18,7 @@ public class DatabaseConnection {
     }
 
     public static void main(String[] args) {
-        if (getConnection() != null) {
-            System.out.println("Szuper! A Java és a MySQL sikeresen összekapcsolódott! 🥂");
-
-            // 1. Adatok hozzáadása (elég egyszer lefuttatni)
-            addMenuItem("Gulyásleves", 2490, 1);
-            addMenuItem("Sült oldalas", 3850, 1);
-            addMenuItem("Limonádé", 950, 2);
-            addMenuItem("Somlói galuska", 1600, 3);
-
-            // 2. Listázás, hogy lássuk az eredményt
-            listCategories();
-            listMenuItems();
-        }
+        listMenuItemsWithCategories();
     }
 
     public static void addCategory(String name, String description) {
@@ -145,6 +133,29 @@ public class DatabaseConnection {
 
         } catch (SQLException e) {
             System.out.println("Hiba az étel mentésekor: " + e.getMessage());
+        }
+    }
+
+    public static void listMenuItemsWithCategories() {
+        String sql = "SELECT m.name, m.price, c.name AS category_name " +
+                "FROM menu_items m " +
+                "JOIN categories c ON m.category_id = c.id";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            System.out.println("--- Étlap kategóriákkal együtt ---");
+            while (rs.next()) {
+                String itemName = rs.getString("name");
+                double price = rs.getDouble("price");
+                String categoryName = rs.getString("category_name");
+
+                System.out.println(itemName + " [" + categoryName + "] - " + price + " Ft");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Hiba a JOIN lekérdezés során: " + e.getMessage());
         }
     }
 }
