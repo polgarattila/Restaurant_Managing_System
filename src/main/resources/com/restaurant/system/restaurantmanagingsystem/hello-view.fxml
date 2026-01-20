@@ -8,12 +8,10 @@
         <Tab text="Étlap Kezelése">
             <VBox spacing="10" alignment="CENTER">
                 <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
-
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <Label text="Keresés:" />
                     <TextField fx:id="searchField" promptText="Írd be az étel nevét..." prefWidth="250.0" />
                 </HBox>
-
                 <TableView fx:id="menuTable" prefHeight="350.0" prefWidth="600.0">
                     <columns>
                         <TableColumn fx:id="nameColumn" text="Étel név" prefWidth="150.0" />
@@ -21,13 +19,11 @@
                         <TableColumn fx:id="categoryColumn" text="Kategória" prefWidth="150.0" />
                     </columns>
                 </TableView>
-
                 <HBox spacing="10" alignment="CENTER">
                     <TextField fx:id="editNameField" promptText="Név módosítása" />
                     <TextField fx:id="editPriceField" promptText="Ár módosítása" prefWidth="80.0" />
                     <ComboBox fx:id="editCategoryComboBox" promptText="Kategória" />
                 </HBox>
-
                 <HBox spacing="20" alignment="CENTER">
                     <Button text="Módosítás Mentése" onAction="#onUpdateButtonClick" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
                     <Button text="Kijelölt Törlése" onAction="#onDeleteButtonClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
@@ -38,7 +34,7 @@
         <Tab text="Új Étel Felvétele">
             <VBox spacing="20" alignment="CENTER">
                 <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
-                <Label text="Új tétel hozzáadása az adatbázishoz" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Label text="Új tétel hozzáadása" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                 <GridPane vgap="10" hgap="10" alignment="CENTER">
                     <Label text="Név:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                     <TextField fx:id="newNameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
@@ -47,43 +43,43 @@
                     <Label text="Kategória:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                     <ComboBox fx:id="newCategoryComboBox" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                 </GridPane>
-                <Button text="Hozzáadás az Étlaphoz" onAction="#onAddButtonClick" prefWidth="200" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+                <Button text="Hozzáadás" onAction="#onAddButtonClick" prefWidth="200" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+            </VBox>
+        </Tab>
+
+        <Tab text="Statisztika">
+            <VBox spacing="20" alignment="CENTER">
+                <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
+                <Label text="Étlap Áttekintés" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+                <GridPane vgap="15" hgap="20" alignment="CENTER" style="-fx-background-color: #f4f4f4; -fx-padding: 20; -fx-background-radius: 10;">
+                    <Label text="Összes étel száma:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="totalItemsLabel" text="0" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    <Label text="Átlagos ár:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="avgPriceLabel" text="0 Ft" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                    <Label text="Legdrágább étel:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="maxPriceLabel" text="-" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                </GridPane>
+                <Button text="Adatok Frissítése" onAction="#refreshStatistics" style="-fx-background-color: #607D8B; -fx-text-fill: white;"/>
+            </VBox>
+        </Tab>
+
+        <Tab text="Kategóriák">
+            <VBox spacing="15" alignment="CENTER">
+                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                <Label text="Kategóriák kezelése" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                <ListView fx:id="categoryListView" prefHeight="200.0" prefWidth="400.0" />
+                <Separator />
+                <VBox spacing="10" alignment="CENTER" style="-fx-background-color: #eeeeee; -fx-padding: 15; -fx-background-radius: 5;">
+                    <Label text="Új kategória / Alkategória hozzáadása" style="-fx-font-weight: bold;" />
+                    <HBox spacing="10" alignment="CENTER">
+                        <TextField fx:id="categoryNameField" promptText="Kategória neve" />
+                        <ComboBox fx:id="parentCategoryComboBox" promptText="Szülő (opcionális)" />
+                        <Button text="Mentés" onAction="#onAddCategoryClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+                        <Button text="Módosítás" onAction="#onUpdateCategoryClick" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
+                    </HBox>
+                </VBox>
+                <Button text="Kijelölt törlése" onAction="#onDeleteCategoryClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
             </VBox>
         </Tab>
     </tabs>
-
-    <Tab text="Statisztika">
-        <VBox spacing="20" alignment="CENTER">
-            <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
-            <Label text="Étlap Áttekintés" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-
-            <GridPane vgap="15" hgap="20" alignment="CENTER" style="-fx-background-color: #f4f4f4; -fx-padding: 20; -fx-background-radius: 10;">
-                <Label text="Összes étel száma:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
-                <Label fx:id="totalItemsLabel" text="0" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                <Label text="Átlagos ár:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
-                <Label fx:id="avgPriceLabel" text="0 Ft" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                <Label text="Legdrágább étel:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
-                <Label fx:id="maxPriceLabel" text="-" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-            </GridPane>
-
-            <Button text="Adatok Frissítése" onAction="#refreshStatistics" style="-fx-background-color: #607D8B; -fx-text-fill: white;"/>
-        </VBox>
-    </Tab>
-
-    <Tab text="Kategóriák">
-        <VBox spacing="15" alignment="CENTER">
-            <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
-            <Label text="Kategóriák kezelése" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-
-            <ListView fx:id="categoryListView" prefHeight="200.0" prefWidth="300.0" />
-
-            <HBox spacing="10" alignment="CENTER">
-                <TextField fx:id="categoryNameField" promptText="Új kategória neve" />
-                <Button text="Hozzáadás" onAction="#onAddCategoryClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
-                <Button text="Törlés" onAction="#onDeleteCategoryClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
-            </HBox>
-        </VBox>
-    </Tab>
 </TabPane>

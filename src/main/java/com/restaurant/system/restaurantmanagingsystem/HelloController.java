@@ -35,6 +35,7 @@ public class HelloController {
 
     @FXML private ListView<Category> categoryListView;
     @FXML private TextField categoryNameField;
+    @FXML private ComboBox<Category> parentCategoryComboBox;
 
     // Ez a lista tárolja az összes adatot a memóriában
     private ObservableList<MenuItem> masterData = FXCollections.observableArrayList();
@@ -79,6 +80,26 @@ public class HelloController {
 
         setupNumberValidation(newPriceField);
         setupNumberValidation(editPriceField);
+
+        // Kategória lista kijelölésének figyelése
+        categoryListView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                categoryNameField.setText(newSelection.getName());
+                // Beállítjuk a szülőt a ComboBox-ban (ha van)
+                if (newSelection.getParentId() != null) {
+                    for (Category cat : parentCategoryComboBox.getItems()) {
+                        if (cat.getId() == newSelection.getParentId()) {
+                            parentCategoryComboBox.setValue(cat);
+                            break;
+                        }
+                    }
+                } else {
+                    parentCategoryComboBox.setValue(null);
+                }
+            }
+        });
+
+        refreshCategoryLists();
 
         loadMenuItems();
     }
@@ -204,31 +225,90 @@ public class HelloController {
     @FXML
     protected void onAddCategoryClick() {
         String name = categoryNameField.getText();
+        Category parent = parentCategoryComboBox.getValue(); // Lehet null!
+
         if (!name.isEmpty()) {
-            DatabaseConnection.addCategory(name);
+            DatabaseConnection.addCategory(name, (parent != null ? parent.getId() : null));
             categoryNameField.clear();
-            refreshCategoryLists(); // Frissítjük a listát és a ComboBoxokat is
-        } else {
-            showAlert("Hiba", "Adj meg egy nevet!", Alert.AlertType.WARNING);
+            refreshCategoryLists();
         }
+    }
+
+    @FXML
+    protected void onUpdateCategoryClick() {
+        Category selected = categoryListView.getSelectionModel().getSelectedItem();
+
+        // 1. Ellenőrizzük, van-e kijelölés
+        if (selected == null) {
+            showAlert("Figyelem", "Kérlek, válassz ki egy kategóriát a listából a módosításhoz!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        String newName = categoryNameField.getText();
+        Category parent = parentCategoryComboBox.getValue();
+        Integer parentId = (parent != null) ? parent.getId() : null;
+
+        // 2. Üres név ellenőrzése
+        if (newName.isEmpty()) {
+            showAlert("Hiba", "A kategória neve nem lehet üres!", Alert.AlertType.ERROR);
+            return;
+        }
+
+        // 3. Önhivatkozás elleni védelem (ne lehessen önmaga szülője)
+        if (parentId != null && parentId == selected.getId()) {
+            showAlert("Logikai hiba", "Egy kategória nem lehet önmaga szülője! Kérlek, válassz másik szülőt vagy hagyd üresen.", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // 4. Módosítás végrehajtása
+        DatabaseConnection.updateCategory(selected.getId(), newName, parentId);
+        refreshCategoryLists();
+        showAlert("Siker", "A kategória (" + newName + ") sikeresen frissítve lett!", Alert.AlertType.INFORMATION);
     }
 
     @FXML
     protected void onDeleteCategoryClick() {
         Category selected = categoryListView.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            DatabaseConnection.deleteCategory(selected.getId());
-            refreshCategoryLists();
-        } else {
-            showAlert("Hiba", "Válassz ki egy kategóriát a törléshez!", Alert.AlertType.WARNING);
+
+        if (selected == null) {
+            showAlert("Figyelem", "Válassz ki egy kategóriát a törléshez!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Megerősítés kérése
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Törlés megerősítése");
+        confirm.setHeaderText("Kategória törlése: " + selected.getName());
+        confirm.setContentText("Biztosan törölni akarod? Ha vannak hozzárendelt ételek vagy alkategóriák, a törlés sikertelen lesz.");
+
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            // Itt hívjuk meg a boolean visszatérésű metódust
+            boolean success = DatabaseConnection.deleteCategory(selected.getId());
+
+            if (success) {
+                refreshCategoryLists();
+                showAlert("Siker", "Kategória eltávolítva.", Alert.AlertType.INFORMATION);
+            } else {
+                // Ez fut le, ha a RESTRICT szabály miatt a MySQL nem engedte a törlést
+                showAlert("Hiba", "Nem sikerült a törlés! \n\nIndok: Vannak ételek vagy alkategóriák, amik ehhez a kategóriához tartoznak. Előbb ezeket helyezd át vagy töröld!", Alert.AlertType.ERROR);
+            }
         }
     }
 
     private void refreshCategoryLists() {
-        ObservableList<Category> categories = FXCollections.observableArrayList(DatabaseConnection.getAllCategories());
+        // 1. Lekérjük a legfrissebb listát az adatbázisból
+        List<Category> allCategories = DatabaseConnection.getAllCategories();
+        ObservableList<Category> categories = FXCollections.observableArrayList(allCategories);
+
+        // 2. Frissítjük a kategória kezelő fül listáját
         categoryListView.setItems(categories);
-        // Nagyon fontos: Frissíteni kell a hozzáadás/módosítás füleken lévő ComboBoxokat is!
+
+        // 3. Frissítjük a kategória kezelő fül SZÜLŐ választóját
+        parentCategoryComboBox.setItems(categories);
+
+        // 4. Frissítjük az étel hozzáadás és szerkesztés ComboBoxait
         newCategoryComboBox.setItems(categories);
         editCategoryComboBox.setItems(categories);
     }
+
 }

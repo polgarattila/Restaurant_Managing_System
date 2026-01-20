@@ -62,16 +62,15 @@ public class DatabaseConnection {
 
     public static List<Category> getAllCategories() {
         List<Category> categories = new ArrayList<>();
-        String sql = "SELECT id, name FROM categories";
+        String sql = "SELECT id, name, parent_id FROM categories";
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                categories.add(new Category(rs.getInt("id"), rs.getString("name")));
+                categories.add(new Category(rs.getInt("id"), rs.getString("name"),
+                        (Integer) rs.getObject("parent_id")));
             }
-        } catch (SQLException e) {
-            System.out.println("Hiba a kategóriák lekérésekor: " + e.getMessage());
-        }
+        } catch (SQLException e) { e.printStackTrace(); }
         return categories;
     }
 
@@ -103,26 +102,44 @@ public class DatabaseConnection {
         }
     }
 
-    public static void addCategory(String name) {
-        String sql = "INSERT INTO categories (name) VALUES (?)";
+    public static void addCategory(String name, Integer parentId) {
+        String sql = "INSERT INTO categories (name, parent_id) VALUES (?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, name);
+            if (parentId != null) pstmt.setInt(2, parentId);
+            else pstmt.setNull(2, java.sql.Types.INTEGER);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            System.out.println("Hiba kategória hozzáadásakor: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    public static void deleteCategory(int id) {
+    public static void updateCategory(int id, String name, Integer parentId) {
+        String sql = "UPDATE categories SET name = ?, parent_id = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            if (parentId != null) pstmt.setInt(2, parentId);
+            else pstmt.setNull(2, java.sql.Types.INTEGER);
+            pstmt.setInt(3, id);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static boolean deleteCategory(int id) {
         String sql = "DELETE FROM categories WHERE id = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             pstmt.executeUpdate();
+            return true; // Sikerült
         } catch (SQLException e) {
-            // Fontos: Itt hiba lesz, ha van étel az adott kategóriában (Foreign Key constraint)
-            System.out.println("Hiba: Nem törölhető kategória, amíg tartozik hozzá étel!");
+            // Ha az ErrorCode 1451, akkor az idegen kulcs korlátozás miatt nem törölhető
+            System.out.println("Hiba a törlésnél: " + e.getMessage());
+            return false; // Nem sikerült (pl. vannak benne ételek)
         }
     }
 }
