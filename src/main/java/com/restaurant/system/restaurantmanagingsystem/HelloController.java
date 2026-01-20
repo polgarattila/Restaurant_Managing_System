@@ -7,6 +7,8 @@ import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class HelloController {
@@ -296,19 +298,34 @@ public class HelloController {
     }
 
     private void refreshCategoryLists() {
-        // 1. Lekérjük a legfrissebb listát az adatbázisból
         List<Category> allCategories = DatabaseConnection.getAllCategories();
-        ObservableList<Category> categories = FXCollections.observableArrayList(allCategories);
 
-        // 2. Frissítjük a kategória kezelő fül listáját
+        // 1. Hierarchikus sorrendbe rendezzük a listát
+        List<Category> hierarchicList = new ArrayList<>();
+        sortCategoriesHierarchical(allCategories, null, hierarchicList);
+
+        ObservableList<Category> categories = FXCollections.observableArrayList(hierarchicList);
+
+        // 2. Beállítjuk a listát
         categoryListView.setItems(categories);
 
-        // 3. Frissítjük a kategória kezelő fül SZÜLŐ választóját
+        // 3. A ComboBoxoknál is fontos a hierarchikus sorrend a könnyebb átláthatóság miatt
         parentCategoryComboBox.setItems(categories);
-
-        // 4. Frissítjük az étel hozzáadás és szerkesztés ComboBoxait
         newCategoryComboBox.setItems(categories);
         editCategoryComboBox.setItems(categories);
+    }
+
+    // Segédmetódus a rekurzív rendezéshez
+    private void sortCategoriesHierarchical(List<Category> all, Integer parentId, List<Category> result) {
+        for (Category c : all) {
+            // Megkeressük azokat, akiknek a parentId-ja megegyezik az éppen keresettel
+            if ((parentId == null && c.getParentId() == null) ||
+                    (parentId != null && parentId.equals(c.getParentId()))) {
+                result.add(c);
+                // Rekurzívan megkeressük ennek a kategóriának a gyerekeit is
+                sortCategoriesHierarchical(all, c.getId(), result);
+            }
+        }
     }
 
 }

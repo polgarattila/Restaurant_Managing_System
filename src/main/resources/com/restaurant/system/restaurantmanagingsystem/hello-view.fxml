@@ -31,7 +31,7 @@
             </VBox>
         </Tab>
 
-        <Tab text="Új Étel Felvétele">
+        <Tab text="Új Termék Felvétele">
             <VBox spacing="20" alignment="CENTER">
                 <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
                 <Label text="Új tétel hozzáadása" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>

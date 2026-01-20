@@ -18,8 +18,9 @@ public class Category {
 
     @Override
     public String toString() {
-        // Ha van szülője, jelezzük a névben (pl. "Sör (Alkohol)" vagy "Cola (Üdítő)")
-        // Ehhez szükség lehet a szülő nevének lekérésére is, de kezdésnek ez is jó:
-        return (parentId != null ? "  ↳ " : "") + name;
+        if (parentId != null && parentId > 0) {
+            return "    ↳ " + name; // Négy szóköz és egy nyíl az alkategóriáknak
+        }
+        return name.toUpperCase(); // A főkategóriák legyenek nagybetűsek a hangsúly kedvéért
     }
 }
