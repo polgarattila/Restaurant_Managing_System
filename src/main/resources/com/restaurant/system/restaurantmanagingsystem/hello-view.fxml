@@ -25,6 +25,7 @@
         <TextField fx:id="priceField" promptText="Ár" prefWidth="80.0" />
         <ComboBox fx:id="categoryComboBox" promptText="Válassz kategóriát" prefWidth="150.0" />
         <Button text="Hozzáadás" onAction="#onAddButtonClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button text="Módosítás" onAction="#onUpdateButtonClick" style="-fx-background-color: #2196F3; -fx-text-fill: white;"/>
         <Button text="Törlés" onAction="#onDeleteButtonClick" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
     </HBox>
 </VBox>

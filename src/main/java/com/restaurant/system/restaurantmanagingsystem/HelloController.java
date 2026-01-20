@@ -31,9 +31,22 @@ public class HelloController {
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
         categoryColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
-
         // ComboBox feltöltése kategóriákkal
         categoryComboBox.setItems(FXCollections.observableArrayList(DatabaseConnection.getAllCategories()));
+
+        menuTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                nameField.setText(newSelection.getName());
+                priceField.setText(String.valueOf(newSelection.getPrice()));
+                // Kategória kikeresése a ComboBox-ban név alapján
+                for (Category cat : categoryComboBox.getItems()) {
+                    if (cat.getName().equals(newSelection.getCategoryName())) {
+                        categoryComboBox.setValue(cat);
+                        break;
+                    }
+                }
+            }
+        });
 
         // Táblázat feltöltése ételekkel
         loadMenuItems();
@@ -109,5 +122,34 @@ public class HelloController {
         }
     }
 
+    @FXML
+    protected void onUpdateButtonClick() {
+        MenuItem selectedItem = menuTable.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            showAlert("Hiba", "Válassz ki egy elemet a módosításhoz!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        try {
+            String name = nameField.getText();
+            double price = Double.parseDouble(priceField.getText());
+            Category selectedCategory = categoryComboBox.getValue();
+
+            if (name.isEmpty() || selectedCategory == null) {
+                showAlert("Hiba", "Minden mezőt tölts ki!", Alert.AlertType.WARNING);
+                return;
+            }
+
+            boolean success = DatabaseConnection.updateMenuItem(selectedItem.getId(), name, price, selectedCategory.getId());
+
+            if (success) {
+                showAlert("Siker", "Tétel frissítve!", Alert.AlertType.INFORMATION);
+                loadMenuItems(); // Táblázat újratöltése
+            }
+        } catch (NumberFormatException e) {
+            showAlert("Hiba", "Hibás ár formátum!", Alert.AlertType.ERROR);
+        }
+    }
 
 }

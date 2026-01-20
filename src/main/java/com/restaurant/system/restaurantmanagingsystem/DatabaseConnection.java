@@ -85,4 +85,21 @@ public class DatabaseConnection {
             System.out.println("Hiba a törlésnél: " + e.getMessage());
         }
     }
+
+    public static boolean updateMenuItem(int id, String name, double price, int categoryId) {
+        String sql = "UPDATE menu_items SET name = ?, price = ?, category_id = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setDouble(2, price);
+            pstmt.setInt(3, categoryId);
+            pstmt.setInt(4, id);
+
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.out.println("Hiba a módosítás során: " + e.getMessage());
+            return false;
+        }
+    }
 }
